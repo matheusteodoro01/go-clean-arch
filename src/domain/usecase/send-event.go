@@ -1,6 +1,13 @@
 package usecase
 
-import "github.com/matheusteodoro01/go-clean-arch/src/domain/models"
+import (
+	"bytes"
+	"encoding/gob"
+	"log"
+
+	"github.com/matheusteodoro01/go-clean-arch/src/domain/models"
+	"github.com/matheusteodoro01/go-clean-arch/src/domain/providers"
+)
 
 type SendEventInputDto struct {
 	Service string
@@ -10,20 +17,24 @@ type SendEventInputDto struct {
 }
 
 type SendEventUseCase struct {
-	EventRepository models.EventRepository
+	MessageSender providers.MessageSender
 }
 
-func NewSendEventUseCase(eventRepository models.EventRepository) *SendEventUseCase {
-	return &SendEventUseCase{EventRepository: eventRepository}
+func NewSendEventUseCase(messageSender providers.MessageSender) *SendEventUseCase {
+	return &SendEventUseCase{MessageSender: messageSender}
 }
 
-func (useCase *SendEventUseCase) SendEvent(inputDto *SendEventInputDto) error {
+func (useCase *SendEventUseCase) Execute(inputDto SendEventInputDto) error {
 	event := models.NewEvent(inputDto.Service, inputDto.Event, inputDto.Date, inputDto.Data)
 
-	err := useCase.EventRepository.Send(event)
+	buf := bytes.Buffer{}
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(event)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
+
+	useCase.MessageSender.Send(buf.Bytes(), "test")
 
 	return nil
 }

@@ -1,9 +1,5 @@
 package models
 
-type EventRepository interface {
-	Send(event *Event) error
-}
-
 type Event struct {
 	Service string
 	Event   string

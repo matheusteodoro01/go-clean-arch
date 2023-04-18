@@ -1,23 +1,27 @@
 package providers
 
-import "github.com/confluentinc/confluent-kafka-go/kafka"
+import (
+	"github.com/confluentinc/confluent-kafka-go/kafka"
+)
 
-func Consume(topics []string, servers string, msgChan chan *kafka.Message) {
+type KafkaMessagerBroker struct {
+	Producer *kafka.Producer
+}
 
-	kafkaConsumer, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers": servers,
-		"group.id":          "myGroup",
-		"auto.offset.reset": "earliest",
-	})
-	if err != nil {
+func NewKafkaMessagerProducer() *KafkaMessagerBroker {
+	producer, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": "localhost:9092"})
+	if err == nil {
 		panic(err)
 	}
+	return &KafkaMessagerBroker{Producer: producer}
+}
 
-	kafkaConsumer.SubscribeTopics(topics, nil)
-	for {
-		msg, err := kafkaConsumer.ReadMessage(-1)
-		if err == nil {
-			msgChan <- msg
-		}
-	}
+func (producer *KafkaMessagerBroker) Send(msg []byte, topic string) {
+	defer producer.Producer.Close()
+	producer.Producer.Produce(&kafka.Message{
+		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
+		Value:          msg,
+	}, nil)
+
+	producer.Producer.Flush(15 * 1000)
 }
